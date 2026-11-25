@@ -25,6 +25,16 @@ setup_multinode_env() {
 User=root
 Group=root
 EOF
+
+    # Fix existing SSL cert/key ownership & dereference symlinks if present
+    if [[ -f /etc/hysteria/server.crt && -f /etc/hysteria/server.key ]]; then
+        cp -L /etc/hysteria/server.crt /etc/hysteria/server.crt.tmp && mv /etc/hysteria/server.crt.tmp /etc/hysteria/server.crt
+        cp -L /etc/hysteria/server.key /etc/hysteria/server.key.tmp && mv /etc/hysteria/server.key.tmp /etc/hysteria/server.key
+        chown root:root /etc/hysteria/server.crt /etc/hysteria/server.key
+        chmod 644 /etc/hysteria/server.crt
+        chmod 600 /etc/hysteria/server.key
+    fi
+
     systemctl daemon-reload
 
     # Kernel BBR & 16MB UDP buffer optimization
@@ -189,6 +199,7 @@ while true; do
                 rm -f /etc/hysteria/server.crt /etc/hysteria/server.key
                 cp "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" /etc/hysteria/server.crt
                 cp "/etc/letsencrypt/live/$DOMAIN/privkey.pem" /etc/hysteria/server.key
+                chown root:root /etc/hysteria/server.crt /etc/hysteria/server.key
                 chmod 644 /etc/hysteria/server.crt
                 chmod 600 /etc/hysteria/server.key
 
@@ -197,6 +208,7 @@ while true; do
 #!/bin/bash
 cp "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" /etc/hysteria/server.crt
 cp "/etc/letsencrypt/live/$DOMAIN/privkey.pem" /etc/hysteria/server.key
+chown root:root /etc/hysteria/server.crt /etc/hysteria/server.key
 chmod 644 /etc/hysteria/server.crt
 chmod 600 /etc/hysteria/server.key
 systemctl restart 'hysteria-server@*' 2>/dev/null || true
@@ -308,6 +320,7 @@ if [[ ! -f /etc/hysteria/server.crt ]]; then
     openssl req -x509 -nodes -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
         -keyout /etc/hysteria/server.key -out /etc/hysteria/server.crt \
         -subj "/CN=bing.com" -days 3650 2>/dev/null
+    chown root:root /etc/hysteria/server.crt /etc/hysteria/server.key
     chmod 644 /etc/hysteria/server.crt
     chmod 600 /etc/hysteria/server.key
 fi
